@@ -1,0 +1,126 @@
+class Othello
+    BLANK = "+"
+    BLACK = "○"
+    WHITE = "●"
+    BOARD_SIZE = 8 + 1  # 8×8の盤面とガイド
+    GUIDE = ["\\", "a", "b", "c", "d", "e", "f", "g", "h"]
+
+
+    # コンストラクター
+    def initialize
+        setup
+        game
+    end
+
+    def setup
+        create_board(BOARD_SIZE)
+        # 初期配置の石を置く
+        put_stone("d4", false)
+        put_stone("e5", false)
+        put_stone("e4", true)
+        put_stone("d5", true)
+        @turn = true
+    end
+
+    # 盤面(board)を生成
+    def create_board(size)
+        @board = Array.new(size) { Array.new(size) }
+
+        # boardに要素を格納
+        size.times do |row|
+            size.times do |col|
+                # 00の表記
+                if ( col == 0 && row == 0); @board[col][row] = GUIDE[row]
+                # アルファベットのガイドを格納
+                elsif row == 0; @board[col][row] = GUIDE[col]
+                # 数字のガイドを格納
+                elsif col == 0; @board[col][row] = row
+                end
+            end
+        end
+    end
+
+
+    # 石を置くためのメソッド
+    def put_stone(input, status)
+        # 石を配置
+        @board[convert(input)[0]][convert(input)[1]] = status
+    end
+    
+    # 文字列を数値に変換するメソッド
+    def convert(input)
+        # 列を取得 (.index()で一致文字から数値に変換)
+        pos_col = GUIDE.index(input[0])
+        # 行を取得 (.to_iで文字から数値に変換)
+        pos_row = input[1].to_i
+        # 格納した配列を返す return pos
+        pos = [pos_col, pos_row]
+    end
+
+
+    def game
+        while true
+            view
+            case @turn
+            when true;  puts "\"#{BLACK}\"の番です。"
+            when false; puts "\"#{WHITE}\"の番です。"
+            end
+            get_position
+            @turn = !@turn  # 順番を交代させる
+        end
+    end
+
+
+    # フィールドを表示するメソッド
+    def view
+        print "\n"
+        BOARD_SIZE.times do |y|
+            BOARD_SIZE.times do |x|
+                print status(@board[x][y])
+                print " "
+            end
+            print "\n"
+        end
+        print "\n"
+    end
+    
+    # マスの状態から表示を決定するメソッド
+    def 
+        status(st)
+        case st
+        when nil;   BLANK
+        when true;  BLACK
+        when false; WHITE
+        else st
+        end
+    end
+
+
+    # 石を置く位置を獲得するメソッド
+    def get_position
+        puts "石を配置したい座標を入力してください。(例:c4)"
+        input = gets
+        around(input)
+        put_stone(input, @turn)
+    end
+
+
+    # 置いた石の周囲をチェックするメソッド
+    def around(input)
+        # 置いた石の座標
+        pos_col = convert(input)[0]
+        pos_row = convert(input)[1]
+
+        # 9マス分繰り返す([-1,-1] ~ [1,1]) 
+        -1.upto 1 do |direction_col|
+            -1.upto 1 do |direction_row| 
+                # 自分の置いたマスである[0,0]は処理を行わない
+                break if direction_col == 0 && direction_row == 0
+                # マスの座標 another
+                another_col = pos_col + direction_col
+                another_row = pos_row + direction_row
+                
+                @board[another_col][another_row]
+            end
+        end
+    end
