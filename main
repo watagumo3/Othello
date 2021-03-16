@@ -1,52 +1,100 @@
 class Othello
     BLANK = "+"
-    BLACK = "○"
-    WHITE = "●"
-    BOARD_SIZE = 8 + 1  # 8×8の盤面とガイド
+    BLACK = "B"
+    WHITE = "W"
+    BOARD_SIZE = 8              # 8×8の盤面
+    VIEW_SIZE = BOARD_SIZE + 1  # ガイド分増やす
     GUIDE = ["\\", "a", "b", "c", "d", "e", "f", "g", "h"]
 
 
     # コンストラクター
     def initialize
-        setup
-        game
+        setup()
+        game()
+        result()
     end
 
     def setup
-        create_board(BOARD_SIZE)
+        create_board()
         # 初期配置の石を置く
-        put_stone("d4", false)
-        put_stone("e5", false)
-        put_stone("e4", true)
-        put_stone("d5", true)
+        put_stone(convert("d4"), false)
+        put_stone(convert("e5"), false)
+        put_stone(convert("e4"), true)
+        put_stone(convert("d5"), true)
         @turn = true
     end
 
+
+    # ゲームのメソッド
+    def game
+        while true
+            view()
+
+            # 順番を表示
+            if @turn
+                puts "\"#{BLACK}\"の番です。"
+            else
+                puts "\"#{WHITE}\"の番です。"
+            end
+
+            # 石を配置できる座標を表示
+            can_positions = hint()
+            if can_positions.length == 0
+                blank_ex == false
+                1.upto BOARD_SIZE do |row|
+                    1.upto BOARD_SIZE do |col|
+                        blank_ex == true if @board[col][row] == nil
+                    end
+                end
+                if blank_ex
+                    puts "パスします"
+                else 
+                    break
+                end
+            end
+
+            
+
+            # 石を配置したい座標を取得
+            get_pos = convert(get_position())
+            # 石が配置できる場所か
+            if can_position?(can_positions, get_pos)
+                # 石を置く
+                put_stone(get_pos, @turn)
+                # 石をひっくり返す
+                rule(get_pos, "rev")
+                # 順番を交代させる
+                @turn = !@turn
+            else
+                puts "その座標は配置できません。"
+            end
+
+        end
+    end
+
+
     # 盤面(board)を生成
-    def create_board(size)
-        @board = Array.new(size) { Array.new(size) }
+    def create_board()
+        @board = Array.new(VIEW_SIZE) { Array.new(VIEW_SIZE) }
 
         # boardに要素を格納
-        size.times do |row|
-            size.times do |col|
+        VIEW_SIZE.times do |row|
+            VIEW_SIZE.times do |col|
                 # 00の表記
-                if ( col == 0 && row == 0); @board[col][row] = GUIDE[row]
+                if ( col == 0 && row == 0)
+                    @board[col][row] = GUIDE[col]
                 # アルファベットのガイドを格納
-                elsif row == 0; @board[col][row] = GUIDE[col]
+                elsif row == 0
+                    @board[col][row] = GUIDE[col]
                 # 数字のガイドを格納
-                elsif col == 0; @board[col][row] = row
+                elsif col == 0
+                    @board[col][row] = row
                 end
             end
         end
     end
 
 
-    # 石を置くためのメソッド
-    def put_stone(input, status)
-        # 石を配置
-        @board[convert(input)[0]][convert(input)[1]] = status
-    end
-    
     # 文字列を数値に変換するメソッド
     def convert(input)
         # 列を取得 (.index()で一致文字から数値に変換)
@@ -54,29 +102,30 @@ class Othello
         # 行を取得 (.to_iで文字から数値に変換)
         pos_row = input[1].to_i
         # 格納した配列を返す return pos
-        pos = [pos_col, pos_row]
+        position = {col: pos_col, row: pos_row}
+    end
+    
+    
+    # 石を置くためのメソッド
+    def put_stone(position, status)
+        # 石を配置
+        @board[position[:col]][position[:row]] = status
     end
 
 
-    def game
-        while true
-            view
-            case @turn
-            when true;  puts "\"#{BLACK}\"の番です。"
-            when false; puts "\"#{WHITE}\"の番です。"
-            end
-            get_position
-            @turn = !@turn  # 順番を交代させる
-        end
+    # 石を置く位置を獲得するメソッド
+    def get_position
+        puts "石を配置したい座標を入力してください。"
+        gets
     end
 
 
     # フィールドを表示するメソッド
     def view
         print "\n"
-        BOARD_SIZE.times do |y|
-            BOARD_SIZE.times do |x|
-                print status(@board[x][y])
+        VIEW_SIZE.times do |row|
+            VIEW_SIZE.times do |col|
+                print status(@board[col][row])
                 print " "
             end
             print "\n"
@@ -84,6 +133,7 @@ class Othello
         print "\n"
     end
     
+
     # マスの状態から表示を決定するメソッド
     def 
         status(st)
@@ -96,31 +146,143 @@ class Othello
     end
 
 
-    # 石を置く位置を獲得するメソッド
-    def get_position
-        puts "石を配置したい座標を入力してください。(例:c4)"
-        input = gets
-        around(input)
-        put_stone(input, @turn)
+    # 置ける場所か判断する
+    def can_position?(can_positions, get_pos)
+        flag = false
+
+        can_positions.each do |can_pos|
+            flag = true if can_pos == get_pos
+        end
+        
+        return flag
     end
 
 
-    # 置いた石の周囲をチェックするメソッド
-    def around(input)
-        # 置いた石の座標
-        pos_col = convert(input)[0]
-        pos_row = convert(input)[1]
+    # ボードの外の座標か判断するメソッド
+    def outside?(pos)
+        return true if pos < 1 || pos > BOARD_SIZE
+        false
+    end
 
-        # 9マス分繰り返す([-1,-1] ~ [1,1]) 
-        -1.upto 1 do |direction_col|
-            -1.upto 1 do |direction_row| 
-                # 自分の置いたマスである[0,0]は処理を行わない
-                break if direction_col == 0 && direction_row == 0
-                # マスの座標 another
-                another_col = pos_col + direction_col
-                another_row = pos_row + direction_row
+
+    def hint
+        can_positions = []
+
+        1.upto BOARD_SIZE do |pos_col|
+            1.upto BOARD_SIZE do |pos_row|
                 
-                @board[another_col][another_row]
+                # 座標が空白の箇所のみチェック
+                if @board[pos_col][pos_row] == nil
+                    # puts "pos「#{GUIDE[pos_col]}#{pos_row}」"
+                    check_position = {col: pos_col, row: pos_row}
+                    can_position = rule(check_position, "can")
+                    can_positions << can_position  if can_position != nil
+                end
+
             end
         end
+
+        if can_positions.length > 0 
+            print "置ける座標は"
+            can_positions.each do |i|
+                print "「#{GUIDE[i[:col]]}#{i[:row]}」"
+            end
+            print "です。\n"
+        else
+            puts "置ける座標はありません"
+        end
+
+        return can_positions
     end
+
+    # オセロのルール処理を行うメソッド
+    # modeの中身によって動作を変化させる
+    # "can"なら石を置ける座標を返す
+    # "rev"なら間の石をひっくり返す
+    def rule(position, mode)
+        flag = false
+        # 9マス分繰り返す([-1,-1] ~ [1,1]) 
+        -1.upto 1 do |direction_col|
+            -1.upto 1 do |direction_row|
+
+                # 自分の置いたマスである[0,0]は処理を行わない
+                if direction_col != 0 || direction_row != 0
+                    # マスの座標 another
+                    another_col = position[:col]
+                    another_row = position[:row]
+                    # 反転する石を格納する配列
+                    rev_stones = []
+
+                    while true
+                        # anotherにdirectionを加算
+                        another_col += direction_col
+                        another_row += direction_row
+                        # puts "・another「#{GUIDE[another_col]},#{another_row}」"
+
+                        # ボードサイズより大きい場合はブレイク
+                        if outside?(another_col) || outside?(another_row)
+                            # puts "・another is outside「#{GUIDE[another_col]},#{another_row}」"
+                            break
+                        end
+                        
+                        # anotherの状態による分岐
+                        case @board[another_col][another_row]
+                        # 相手の石なら
+                        when !@turn
+                            rev_stones << {col: another_col, row: another_row}
+                        # 自分の石なら
+                        when @turn
+                            if rev_stones.length > 0
+                                if mode == "rev"
+                                    rev_stones.each do |rev_stone|
+                                        @board[rev_stone[:col]][rev_stone[:row]] = @turn
+                                    end
+                                end
+                                # flag = true
+                                return position
+                            end
+                            break
+                        else
+                            break
+                        end
+                        
+                    end
+
+                end
+            end
+        end
+
+        return nil
+    end
+
+
+    def result
+        view()
+        num_black = 0
+        num_white = 0
+        VIEW_SIZE.times do |row|
+            VIEW_SIZE.times do |col|
+                case @board[col][row]
+                when true;  num_black += 1
+                when false; num_white += 1
+                end
+            end
+        end
+        
+        puts "\"#{BLACK}\"の数 #{num_black}"
+        puts "\"#{WHITE}\"の数 #{num_white}"
+
+        if num_black == num_white
+            puts "【 引き分け 】"
+        elsif num_black > num_white
+            puts "【 \"#{BLACK}\"の勝ち！ 】"
+        elsif num_black < num_white
+            puts "【 \"#{WHITE}\"の勝ち！ 】"
+        end
+        
+    end
+
+
+end
+
+o = Othello.new
